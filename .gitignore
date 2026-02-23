@@ -154,3 +154,5 @@ tmp/
 # !logs/.gitkeep
 .gitignore
 logs/requests.log
+logs/requests.log
+logs/app.log
