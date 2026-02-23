@@ -8,14 +8,19 @@ import uuid
 import time
 import traceback
 import os
+import warnings
 from datetime import datetime
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from starlette.middleware.base import BaseHTTPMiddleware
+
+# Suppress scikit-learn version warnings (pickled models from different versions)
+warnings.filterwarnings('ignore', category=UserWarning, module='sklearn')
 
 # ====================== LOGGING SETUP ======================
 os.makedirs("logs", exist_ok=True)
@@ -52,8 +57,25 @@ error_logger = setup_logger("error_logger", "logs/errors.log", logging.ERROR)
 app_logger = setup_logger("app_logger", "logs/app.log")
 
 # ====================== LOAD MODEL ======================
+def fix_model_compatibility(model):
+    """Fix sklearn version compatibility issues with pickled models"""
+    try:
+        # For RandomForest models, fix each tree estimator
+        if hasattr(model, 'estimators_'):
+            for estimator in model.estimators_:
+                if not hasattr(estimator, 'monotonic_cst'):
+                    estimator.monotonic_cst = None
+        # For single tree models
+        elif not hasattr(model, 'monotonic_cst'):
+            model.monotonic_cst = None
+    except Exception as e:
+        app_logger.warning(f"Could not apply compatibility fix: {e}")
+    return model
+
 with open("model_artifacts/churn_model.pkl", "rb") as f:
     model = pickle.load(f)
+    model = fix_model_compatibility(model)
+    
 with open("model_artifacts/scaler.pkl", "rb") as f:
     scaler = pickle.load(f)
 with open("model_artifacts/label_encoders.pkl", "rb") as f:
@@ -81,6 +103,15 @@ class ChurnPredictionResponse(BaseModel):
 
 # ====================== APP ======================
 app = FastAPI(title="Bank Churn Prediction API", version="2.0.0")
+
+# Add CORS middleware to allow frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -152,4 +183,22 @@ def predict_churn(request_data: ChurnPredictionRequest, request: Request):
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print("=" * 60)
+    print("🚀 Starting Bank Churn Prediction API v2.0")
+    print("=" * 60)
+    print(f"📊 Model artifacts loaded from: model_artifacts/")
+    print(f"📝 Logs directory: logs/")
+    print(f"🌐 Server will start on: http://0.0.0.0:8000")
+    print(f"📖 API Documentation: http://localhost:8000/docs")
+    print("=" * 60)
+    
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    except OSError as e:
+        if "address already in use" in str(e).lower():
+            print("\n❌ ERROR: Port 8000 is already in use!")
+            print("💡 Solutions:")
+            print("   1. Kill existing process: lsof -ti:8000 | xargs kill -9")
+            print("   2. Use different port: uvicorn app:app --port 8001")
+        else:
+            raise

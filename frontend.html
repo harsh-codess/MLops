@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Churn Prediction - Frontend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-execute {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-execute:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-execute:active {
+            transform: translateY(0);
+        }
+
+        .btn-clear {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 15px;
+            display: none;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .result-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .result-error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+            color: white;
+        }
+
+        .result-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .result-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .detail-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .detail-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .api-status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .api-online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .api-offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .small-text {
+            font-size: 0.75em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏦 Bank Churn Prediction</h1>
+        <p class="subtitle">Predict customer churn risk using Machine Learning</p>
+
+        <div id="apiStatus" class="api-status api-offline">
+            Checking API connection...
+        </div>
+
+        <form id="predictionForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <select id="gender" required>
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="seniorCitizen">Senior Citizen</label>
+                    <select id="seniorCitizen" required>
+                        <option value="">Select Status</option>
+                        <option value="0">No (0)</option>
+                        <option value="1">Yes (1)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="tenure">Tenure (months)</label>
+                    <input type="number" id="tenure" min="0" placeholder="e.g., 30" required>
+                    <div class="small-text">Number of months with company</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="monthlyCharges">Monthly Charges ($)</label>
+                    <input type="number" id="monthlyCharges" step="0.01" min="0" placeholder="e.g., 70.50" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="contract">Contract Type</label>
+                    <select id="contract" required>
+                        <option value="">Select Contract</option>
+                        <option value="Month-to-month">Month-to-month</option>
+                        <option value="One year">One year</option>
+                        <option value="Two year">Two year</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="paymentMethod">Payment Method</label>
+                    <select id="paymentMethod" required>
+                        <option value="">Select Payment Method</option>
+                        <option value="Electronic check">Electronic check</option>
+                        <option value="Mailed check">Mailed check</option>
+                        <option value="Bank transfer (automatic)">Bank transfer (automatic)</option>
+                        <option value="Credit card (automatic)">Credit card (automatic)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="totalCharges">Total Charges ($)</label>
+                    <input type="number" id="totalCharges" step="0.01" min="0" placeholder="e.g., 2115.00" required>
+                    <div class="small-text">Total amount charged to date</div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-execute">🚀 Execute Prediction</button>
+                <button type="button" class="btn-clear" onclick="clearForm()">🔄 Clear Form</button>
+            </div>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px;">Making prediction...</p>
+        </div>
+
+        <div id="result" class="result-container"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        // Check API health on load
+        async function checkAPIHealth() {
+            const statusDiv = document.getElementById('apiStatus');
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                
+                if (data.status === 'healthy' && data.model_loaded) {
+                    statusDiv.className = 'api-status api-online';
+                    statusDiv.innerHTML = '✅ API is online and ready | Model loaded successfully';
+                } else {
+                    throw new Error('Model not loaded');
+                }
+            } catch (error) {
+                statusDiv.className = 'api-status api-offline';
+                statusDiv.innerHTML = '❌ API is offline. Please start the server: <code>python app.py</code>';
+            }
+        }
+
+        // Load example data
+        function loadExample() {
+            document.getElementById('gender').value = 'Male';
+            document.getElementById('seniorCitizen').value = '0';
+            document.getElementById('tenure').value = '30';
+            document.getElementById('monthlyCharges').value = '70.50';
+            document.getElementById('contract').value = 'One year';
+            document.getElementById('paymentMethod').value = 'Electronic check';
+            document.getElementById('totalCharges').value = '2115.00';
+        }
+
+        // Clear form
+        function clearForm() {
+            document.getElementById('predictionForm').reset();
+            document.getElementById('result').style.display = 'none';
+        }
+
+        // Handle form submission
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+
+            // Hide previous results
+            resultDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+
+            // Collect form data
+            const formData = {
+                Gender: document.getElementById('gender').value,
+                SeniorCitizen: parseInt(document.getElementById('seniorCitizen').value),
+                Tenure: parseInt(document.getElementById('tenure').value),
+                MonthlyCharges: parseFloat(document.getElementById('monthlyCharges').value),
+                Contract: document.getElementById('contract').value,
+                PaymentMethod: document.getElementById('paymentMethod').value,
+                TotalCharges: parseFloat(document.getElementById('totalCharges').value)
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                loadingDiv.style.display = 'none';
+
+                if (response.ok) {
+                    displayResult(data);
+                } else {
+                    displayError(data);
+                }
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                displayError({
+                    error: 'Connection Error',
+                    detail: 'Cannot connect to API. Make sure the server is running on port 8000.'
+                });
+            }
+        });
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+            const isChurn = data.prediction === 1;
+            
+            resultDiv.className = `result-container ${isChurn ? 'result-warning' : 'result-success'}`;
+            
+            resultDiv.innerHTML = `
+                <div class="result-title">
+                    ${isChurn ? '⚠️ High Churn Risk' : '✅ Low Churn Risk'}
+                </div>
+                <div style="text-align: center; font-size: 3em; margin: 20px 0;">
+                    ${isChurn ? '🔴' : '🟢'}
+                </div>
+                <div style="text-align: center; font-size: 1.2em; margin-bottom: 20px;">
+                    <strong>Prediction: ${data.prediction_label}</strong>
+                </div>
+                <div class="result-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Churn Probability</div>
+                        <div class="detail-value">${(data.churn_probability * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">No Churn Probability</div>
+                        <div class="detail-value">${(data.no_churn_probability * 100).toFixed(1)}%</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 20px; opacity: 0.8; font-size: 0.85em;">
+                    Request ID: ${data.request_id}
+                </div>
+            `;
+            
+            resultDiv.style.display = 'block';
+        }
+
+        function displayError(data) {
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.className = 'result-container result-error';
+            resultDiv.innerHTML = `
+                <div class="result-title">❌ ${data.error || 'Error'}</div>
+                <div style="text-align: center; margin-top: 15px;">
+                    ${data.detail || 'An unexpected error occurred'}
+                </div>
+                ${data.request_id ? `<div style="text-align: center; margin-top: 15px; opacity: 0.8; font-size: 0.85em;">Request ID: ${data.request_id}</div>` : ''}
+            `;
+            
+            resultDiv.style.display = 'block';
+        }
+
+        // Check API health when page loads
+        checkAPIHealth();
+
+        // Add button to load example data
+        window.addEventListener('load', () => {
+            const subtitle = document.querySelector('.subtitle');
+            subtitle.innerHTML += ' | <a href="#" onclick="loadExample(); return false;" style="color: #667eea;">Load Example</a>';
+        });
+    </script>
+</body>
+</html>
